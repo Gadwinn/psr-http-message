@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<phpunit
+    displayDetailsOnTestsThatTriggerWarnings="true"
+    displayDetailsOnPhpunitDeprecations="true"
+    colors="true"
+    backupGlobals="true"
+>
+    <testsuites>
+        <testsuite name="psr-http-factory">
+            <directory>./vendor/http-interop/http-factory-tests/test</directory>
+        </testsuite>
+        <testsuite name="psr-http-message">
+            <directory>./tests</directory>
+        </testsuite>
+    </testsuites>
+
+    <source>
+        <include>
+            <directory suffix=".php">./src</directory>
+        </include>
+    </source>
+
+    <coverage>
+        <report>
+            <html outputDirectory="logs/html-coverage" lowUpperBound="50" highLowerBound="90" />
+            <text outputFile="php://stdout" showUncoveredFiles="true" showOnlySummary="false" />
+        </report>
+    </coverage>
+
+    <php>
+        <!-- Fully qualified class names to your classes -->
+        <const name="REQUEST_FACTORY" value="G\Http\Message\RequestFactory" />
+        <const name="RESPONSE_FACTORY" value="G\Http\Message\ResponseFactory" />
+        <const name="SERVER_REQUEST_FACTORY" value="G\Http\Message\ServerRequestFactory" />
+        <const name="STREAM_FACTORY" value="G\Http\Message\StreamFactory" />
+        <const name="UPLOADED_FILE_FACTORY" value="G\Http\Message\UploadedFileFactory" />
+        <const name="URI_FACTORY" value="G\Http\Message\UriFactory" />
+    </php>
+</phpunit>
