@@ -188,6 +188,59 @@ final class UriTest extends TestCase
         $this->assertSame($expected, (string) $uri);
     }
 
+    /**
+     * @return array<string, array{string, string, string, string}>
+     */
+    public static function getEncodings(): array
+    {
+        return [
+            // label => [raw value, expected path, expected query, expected fragment]
+            'space' => ['a b', 'a%20b', 'a%20b', 'a%20b'],
+            'utf-8' => ['café', 'caf%C3%A9', 'caf%C3%A9', 'caf%C3%A9'],
+            'already encoded' => ['a%20b%C3%A9', 'a%20b%C3%A9', 'a%20b%C3%A9', 'a%20b%C3%A9'],
+            'lowercase triplet' => ['a%c3%a9', 'a%C3%A9', 'a%C3%A9', 'a%C3%A9'],
+            'lone percent' => ['100%', '100%25', '100%25', '100%25'],
+            'percent not hex' => ['%zz%4', '%25zz%254', '%25zz%254', '%25zz%254'],
+            'sub-delims' => ["!$&'()*+,;=", "!$&'()*+,;=", "!$&'()*+,;=", "!$&'()*+,;="],
+            'colon and at' => ['a:b@c', 'a:b@c', 'a:b@c', 'a:b@c'],
+            'unreserved' => ['aZ09-._~', 'aZ09-._~', 'aZ09-._~', 'aZ09-._~'],
+            'slash and question mark' => ['a/b?c', 'a/b%3Fc', 'a/b?c', 'a/b?c'],
+            'hash and brackets' => ['a#[b]', 'a%23%5Bb%5D', 'a%23%5Bb%5D', 'a%23%5Bb%5D'],
+            'other gen-delims' => ['a"<>\\^`{|}', 'a%22%3C%3E%5C%5E%60%7B%7C%7D', 'a%22%3C%3E%5C%5E%60%7B%7C%7D', 'a%22%3C%3E%5C%5E%60%7B%7C%7D'],
+        ];
+    }
+
+    #[DataProvider('getEncodings')]
+    public function testWithersEncodeWithoutDoubleEncoding(string $raw, string $path, string $query, string $fragment): void
+    {
+        $uri = self::createUri('')->withPath($raw)->withQuery($raw)->withFragment($raw);
+
+        $this->assertSame($path, $uri->getPath());
+        $this->assertSame($query, $uri->getQuery());
+        $this->assertSame($fragment, $uri->getFragment());
+
+        // Encoding is idempotent.
+        $again = $uri->withPath($uri->getPath())->withQuery($uri->getQuery())->withFragment($uri->getFragment());
+        $this->assertSame((string) $uri, (string) $again);
+    }
+
+    public function testConstructorEncodesComponents(): void
+    {
+        $uri = self::createUri('http://example.com/caf%C3%A9/a b/+@:?q=a b&r=é/?#frag ment/?');
+
+        $this->assertSame('/caf%C3%A9/a%20b/+@:', $uri->getPath());
+        $this->assertSame('q=a%20b&r=%C3%A9/?', $uri->getQuery());
+        $this->assertSame('frag%20ment/?', $uri->getFragment());
+        $this->assertSame('http://example.com/caf%C3%A9/a%20b/+@:?q=a%20b&r=%C3%A9/?#frag%20ment/?', (string) $uri);
+    }
+
+    public function testUserInfoIsEncodedWithoutDoubleEncoding(): void
+    {
+        $uri = self::createUri('')->withUserInfo('us:er é', 'p@ss:w%20rd!');
+
+        $this->assertSame('us%3Aer%20%C3%A9:p%40ss:w%20rd!', $uri->getUserInfo());
+    }
+
     public function testPathWithMultipleSlashes()
     {
         $expected = 'http://example.org//valid///path';

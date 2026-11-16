@@ -31,6 +31,10 @@ class Uri implements UriInterface
     ];
     protected const PORT_MIN = 0;
     protected const PORT_MAX = 65535;
+    /** RFC 3986 unreserved characters, as a regex character class body. */
+    protected const CHARS_UNRESERVED = 'a-zA-Z0-9_\-\.~';
+    /** RFC 3986 sub-delimiters, as a regex character class body. */
+    protected const CHARS_SUB_DELIMS = '!\$&\'\(\)\*\+,;=';
 
     protected string $scheme = '';
     protected string $userInfo = '';
@@ -256,9 +260,9 @@ class Uri implements UriInterface
      */
     protected function setUserInfo(string $user, ?string $password): self
     {
-        $userInfo = rawurlencode(rawurldecode($user));
+        $userInfo = $this->encode($user, '');
         if ($password !== null) {
-            $userInfo .= ':' . rawurlencode(rawurldecode($password));
+            $userInfo .= ':' . $this->encode($password, ':');
         }
 
         $this->userInfo = $userInfo;
@@ -307,16 +311,7 @@ class Uri implements UriInterface
      */
     protected function setPath(string $path): self
     {
-        $this->path = implode(
-            '/',
-            array_map(
-                'rawurlencode',
-                array_map(
-                    'rawurldecode',
-                    explode('/', $path)
-                )
-            )
-        );
+        $this->path = $this->encode($path, ':@\/');
         return $this;
     }
 
@@ -328,7 +323,7 @@ class Uri implements UriInterface
      */
     protected function setQuery(string $query): self
     {
-        $this->query = $query;
+        $this->query = $this->encode($query, ':@\/\?');
         return $this;
     }
 
@@ -340,7 +335,36 @@ class Uri implements UriInterface
      */
     protected function setFragment(string $fragment): self
     {
-        $this->fragment = $fragment;
+        $this->fragment = $this->encode($fragment, ':@\/\?');
         return $this;
+    }
+
+    /**
+     * Percent-encodes every character that is neither unreserved, a sub-delimiter, one of
+     * the extra allowed characters, nor part of an existing percent-encoded triplet
+     * (RFC 3986). Existing triplets are kept (normalized to uppercase, RFC 3986 §2.1):
+     * a value is never double-encoded.
+     *
+     * @param string $value
+     * @param string $extraChars Extra allowed characters, as a regex character class body
+     *
+     * @return string
+     * @throws InvalidArgumentException
+     */
+    protected function encode(string $value, string $extraChars): string
+    {
+        $encoded = preg_replace_callback(
+            '/(?:[^' . self::CHARS_UNRESERVED . self::CHARS_SUB_DELIMS . $extraChars . '%]++|%(?:[A-Fa-f0-9]{2})?)/',
+            static fn (array $match): string => preg_match('/^%[A-Fa-f0-9]{2}$/D', $match[0]) === 1
+                ? strtoupper($match[0])
+                : rawurlencode($match[0]),
+            $value
+        );
+
+        if ($encoded === null) {
+            throw new InvalidArgumentException('Unable to encode the uri component');
+        }
+
+        return $encoded;
     }
 }

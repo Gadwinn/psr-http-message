@@ -55,6 +55,10 @@ $new = $uri->withScheme('http')
            ->withFragment('');
 ```
 
+User info, path, query and fragment are percent-encoded as required by PSR-7 (RFC 3986), whether they
+come from the constructor or a wither, and never double-encoded: `withPath('/a b/caf%C3%A9')` gives
+`/a%20b/caf%C3%A9`. Sub-delimiters (`!$&'()*+,;=`), `:` and `@` are kept as is; a lone `%` becomes `%25`.
+
 ### Stream
 
 ```php
