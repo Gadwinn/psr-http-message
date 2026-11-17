@@ -365,3 +365,7 @@ $container->bind(StreamFactoryInterface::class, StreamFactory::class);
 $container->bind(UploadedFileFactoryInterface::class, UploadedFileFactory::class);
 $container->bind(UriFactoryInterface::class, UriFactory::class);
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE).
